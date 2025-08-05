@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Amortization Calculator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .table-auto th, .table-auto td {
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main container -->
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Loan Amortization Calculator</h1>
+
+        <!-- Form for user input -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+                <label for="loanAmount" class="block text-sm font-medium text-gray-700">Loan Amount ($)</label>
+                <input type="number" id="loanAmount" value="100000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+            </div>
+            <div>
+                <label for="annualInterestRate" class="block text-sm font-medium text-gray-700">Annual Interest Rate (%)</label>
+                <input type="number" id="annualInterestRate" value="4.5" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+            </div>
+            <div>
+                <label for="loanTermYears" class="block text-sm font-medium text-gray-700">Loan Term (Years)</label>
+                <input type="number" id="loanTermYears" value="30" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+            </div>
+        </div>
+
+        <!-- Button for calculation -->
+        <button id="calculateBtn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+            Calculate Amortization
+        </button>
+
+        <!-- Area to display results -->
+        <div id="results" class="mt-8">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Amortization Schedule:</h2>
+            <div id="monthlyPaymentDisplay" class="mb-4 text-center text-lg font-semibold text-gray-700"></div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-md shadow-sm text-sm table-auto">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="py-2 px-4 text-left text-gray-700 font-semibold">Month</th>
+                            <th class="py-2 px-4 text-left text-gray-700 font-semibold">Payment</th>
+                            <th class="py-2 px-4 text-left text-gray-700 font-semibold">Interest</th>
+                            <th class="py-2 px-4 text-left text-gray-700 font-semibold">Principal</th>
+                            <th class="py-2 px-4 text-left text-gray-700 font-semibold">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="amortizationTableBody">
+                        <!-- Amortization schedule will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="errorMessage" class="mt-4 text-red-600 text-center font-medium hidden"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript to handle the calculation logic -->
+    <script>
+        // Get references to the HTML elements
+        const loanAmountInput = document.getElementById('loanAmount');
+        const annualInterestRateInput = document.getElementById('annualInterestRate');
+        const loanTermYearsInput = document.getElementById('loanTermYears');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const amortizationTableBody = document.getElementById('amortizationTableBody');
+        const monthlyPaymentDisplay = document.getElementById('monthlyPaymentDisplay');
+        const errorMessageDiv = document.getElementById('errorMessage');
+
+        // Add a click event listener to the button
+        calculateBtn.addEventListener('click', () => {
+            // Clear previous results and error messages
+            amortizationTableBody.innerHTML = '';
+            monthlyPaymentDisplay.textContent = '';
+            errorMessageDiv.textContent = '';
+            errorMessageDiv.classList.add('hidden');
+
+            // Get user input values
+            const loanAmount = parseFloat(loanAmountInput.value);
+            const annualInterestRate = parseFloat(annualInterestRateInput.value);
+            const loanTermYears = parseInt(loanTermYearsInput.value);
+
+            // Input validation
+            if (isNaN(loanAmount) || isNaN(annualInterestRate) || isNaN(loanTermYears) ||
+                loanAmount <= 0 || annualInterestRate < 0 || loanTermYears <= 0) {
+                errorMessageDiv.textContent = 'Please enter valid positive numbers for all fields.';
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Convert annual interest rate to monthly decimal rate
+            const monthlyInterestRate = (annualInterestRate / 100) / 12;
+            // Convert loan term from years to months
+            const numberOfPayments = loanTermYears * 12;
+
+            let monthlyPayment;
+
+            // Calculate monthly payment using the loan amortization formula
+            // M = P [ i(1 + i)^n ] / [ (1 + i)^n – 1]
+            // Where:
+            // M = Monthly Payment
+            // P = Principal Loan Amount
+            // i = Monthly Interest Rate (annual rate / 12)
+            // n = Total Number of Payments (loan term in years * 12)
+
+            if (monthlyInterestRate === 0) {
+                // Handle zero interest rate case
+                monthlyPayment = loanAmount / numberOfPayments;
+            } else {
+                const numerator = monthlyInterestRate * Math.pow((1 + monthlyInterestRate), numberOfPayments);
+                const denominator = Math.pow((1 + monthlyInterestRate), numberOfPayments) - 1;
+                monthlyPayment = loanAmount * (numerator / denominator);
+            }
+
+            monthlyPaymentDisplay.textContent = `Estimated Monthly Payment: $${monthlyPayment.toFixed(2)}`;
+
+            let remainingBalance = loanAmount;
+
+            // Generate amortization schedule
+            for (let month = 1; month <= numberOfPayments; month++) {
+                const interestPayment = remainingBalance * monthlyInterestRate;
+                let principalPayment = monthlyPayment - interestPayment;
+
+                // Adjust last payment to account for floating point errors
+                if (month === numberOfPayments) {
+                    principalPayment = remainingBalance; // Pay off exactly the remaining balance
+                    monthlyPayment = interestPayment + principalPayment; // Adjust final payment amount
+                }
+
+                remainingBalance -= principalPayment;
+
+                // To ensure balance doesn't go negative due to floating point errors
+                if (remainingBalance < 0) {
+                    remainingBalance = 0;
+                }
+
+                // Create a new table row for each month's details
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="py-2 px-4">${month}</td>
+                    <td class="py-2 px-4">$${monthlyPayment.toFixed(2)}</td>
+                    <td class="py-2 px-4">$${interestPayment.toFixed(2)}</td>
+                    <td class="py-2 px-4">$${principalPayment.toFixed(2)}</td>
+                    <td class="py-2 px-4">$${remainingBalance.toFixed(2)}</td>
+                `;
+                amortizationTableBody.appendChild(row);
+            }
+        });
+    </script>
+</body>
+</html>
